@@ -33,36 +33,44 @@ async function run() {
     //add
     app.post('/course', async (req, res) => {
       const newCourse = req.body;
-      
+
       const result = await courseCollection.insertOne(newCourse);
       res.send(result);
     })
 
     app.get('/course', async (req, res) => {
-        const cursor = courseCollection.find();
-        const result = await cursor.toArray();
-        res.send(result);
-      })
+      const cursor = courseCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+
+    // cart collection
+    app.post('/carts', async (req, res) => {
+      const item = req.body;
+      console.log(item)
+      const result = await cartCollection.insertOne(item)
+      res.send(result)
+    })
+
     
-      // cart collection
-      app.post('/carts', async(req, res) =>{
-        const item = req.body;
-        console.log(item)
-        const result = await cartCollection.insertOne(item)
-        res.send(result)
-      })
 
-      app.get('/carts', async (req, res) => {
-        const email = req.query.email;
-        console.log(email)
-        if (!email) {
-          res.send([]);
-        }
-        const query = { email: email };
-        const result = await cartCollection.find(query).toArray();
-        res.send(result);
-      });
+    app.get('/carts', async (req, res) => {
+      const email = req.query.email;
+      console.log(email)
+      if (!email) {
+        res.send([]);
+      }
+      const query = { email: email };
+      const result = await cartCollection.find(query).toArray();
+      res.send(result);
+    });
 
+    app.delete('/carts/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await cartCollection.deleteOne(query);
+      res.send(result);
+    })
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
@@ -76,10 +84,10 @@ run().catch(console.dir);
 
 
 app.get('/', (req, res) => {
-    res.send('server is running')
-  })
-  
-  app.listen(port, () => {
-    console.log(`server is running on port ${port}`)
-  })
+  res.send('server is running')
+})
+
+app.listen(port, () => {
+  console.log(`server is running on port ${port}`)
+})
 
