@@ -28,6 +28,15 @@ async function run() {
     await client.connect();
 
     const courseCollection = client.db('ass12').collection('course');
+    const cartCollection = client.db('ass12').collection('carts');
+
+    //add
+    app.post('/course', async (req, res) => {
+      const newCourse = req.body;
+      
+      const result = await courseCollection.insertOne(newCourse);
+      res.send(result);
+    })
 
     app.get('/course', async (req, res) => {
         const cursor = courseCollection.find();
@@ -35,9 +44,24 @@ async function run() {
         res.send(result);
       })
     
+      // cart collection
+      app.post('/carts', async(req, res) =>{
+        const item = req.body;
+        console.log(item)
+        const result = await cartCollection.insertOne(item)
+        res.send(result)
+      })
 
-
-
+      app.get('/carts', async (req, res) => {
+        const email = req.query.email;
+        console.log(email)
+        if (!email) {
+          res.send([]);
+        }
+        const query = { email: email };
+        const result = await cartCollection.find(query).toArray();
+        res.send(result);
+      });
 
 
     // Send a ping to confirm a successful connection
