@@ -50,15 +50,25 @@ async function run() {
 
 
     //JWT
-    app.post('/jwt', (req, res) => {
+    app.post('/jwt', (req, res) =>{
       const user = req.body;
-      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
-      res.send({ token })
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: 60 * 60})
+      res.send({token})
     })
+
+    const verifyAdmin = async(req,res,next) =>{
+      const email = req.decoded.email;
+      const query = {email: email}
+      const user = await usersCollection.findOne(query);
+      if(user?.role !== 'admin'){
+        return res.status(403).send({ error: true, message: 'forbidden message' });
+      }
+      next();
+    }
 
     //USER API
 
-    app.get('/users', async (req, res) => {
+    app.get('/users', verifyJWT, verifyAdmin,  async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
     });
@@ -73,6 +83,22 @@ async function run() {
       const result = await usersCollection.insertOne(user);
       res.send(result)
     })
+
+    // //// admin verify
+    app.get('/users/admin/:email', verifyJWT, async (req, res) => {
+      const email = req.params.email;
+    
+      if (req.decoded.email !== email) {
+        res.send({ admin: false });
+      }
+    
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      const result = { admin: user?.role === 'admin' };
+      res.send(result);
+    });
+
+
     // make admin
     app.patch('/users/admin/:id', async (req, res) => {
       const id = req.params.id;
@@ -103,6 +129,12 @@ async function run() {
       const result = await cursor.toArray();
       res.send(result);
     })
+    app.delete('/course/:id', verifyJWT, verifyAdmin, async (req, res) =>{
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id)}
+      const result = await courseCollection.deleteOne(query)
+      res.send(result);    
+   })
 
     // cart collection
     app.post('/carts', async (req, res) => {
