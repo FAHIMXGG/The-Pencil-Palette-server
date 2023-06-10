@@ -11,20 +11,20 @@ app.use(cors());
 app.use(express.json());
 
 //JWT
-const verifyJWT = (req, res, next) =>{
+const verifyJWT = (req, res, next) => {
   const authorization = req.headers.authorization;
-  if(!authorization){
-    return res.status(401).send({error: true, message: 'unauthorized access'})
+  if (!authorization) {
+    return res.status(401).send({ error: true, message: 'unauthorized access' })
   }
- //bearer token
- const token = authorization.split(' ')[1];
- jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) =>{
-   if(err){
-     return res.status(401).send({error: true, message: 'unauthorized access'})
-   }
-   req.decoded = decoded;
-   next();
- })
+  //bearer token
+  const token = authorization.split(' ')[1];
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({ error: true, message: 'unauthorized access' })
+    }
+    req.decoded = decoded;
+    next();
+  })
 }
 
 
@@ -50,10 +50,10 @@ async function run() {
 
 
     //JWT
-    app.post('/jwt', (req, res) =>{
+    app.post('/jwt', (req, res) => {
       const user = req.body;
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' })
-      res.send({token})
+      res.send({ token })
     })
 
     //USER API
@@ -63,22 +63,22 @@ async function run() {
       res.send(result);
     });
 
-    app.post('/users', async(req, res) =>{
+    app.post('/users', async (req, res) => {
       const user = req.body;
-      const query = {email: user.email}
+      const query = { email: user.email }
       const existingUser = await usersCollection.findOne(query)
-      if(existingUser){
-        return res.send({message:'already exists'})
+      if (existingUser) {
+        return res.send({ message: 'already exists' })
       }
       const result = await usersCollection.insertOne(user);
       res.send(result)
     })
     // make admin
-    app.patch('/users/admin/:id', async(req, res) =>{
+    app.patch('/users/admin/:id', async (req, res) => {
       const id = req.params.id;
-      const filter = {_id: new ObjectId(id)}
+      const filter = { _id: new ObjectId(id) }
       const updateDoc = {
-        $set : {
+        $set: {
           role: "admin"
         }
       }
@@ -112,14 +112,20 @@ async function run() {
       res.send(result)
     })
 
-    
 
-    app.get('/carts', async (req, res) => {
+
+    app.get('/carts', verifyJWT, async (req, res) => {
       const email = req.query.email;
       console.log(email)
       if (!email) {
         res.send([]);
       }
+
+      const decodedEmail = req.decoded.email;
+      if (email !== decodedEmail) {
+        return res.status(401).send({ error: true, message: 'unauthorized access' })
+      }
+
       const query = { email: email };
       const result = await cartCollection.find(query).toArray();
       res.send(result);
