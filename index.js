@@ -43,7 +43,8 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    //await client.connect();
+    client.connect();
 
     const usersCollection = client.db('ass12').collection('users');
     const courseCollection = client.db('ass12').collection('course');
@@ -69,11 +70,37 @@ async function run() {
     }
 
     //USER API
+    app.get('/ins', async (req, res) => {
+      const result = await usersCollection.find({ role: 'instructor' }).toArray();
+      res.send(result);
+    });
+    app.get('/history/:email', async (req, res) => {
+      const email = req.params.email;
+    
+      try {
+        const result = await paymentCollection.find({ email: email }).toArray();
+        res.send(result);
+      } catch (error) {
+        console.error(error);
+        res.status(500).send('Error retrieving payment history');
+      }
+    });
+
+    
+    
+
+    app.delete('/history/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const result = await paymentCollection.deleteOne(query);
+      res.send(result);
+    })
 
     app.get('/users', verifyJWT, verifyAdmin,  async (req, res) => {
       const result = await usersCollection.find().toArray();
       res.send(result);
     });
+    
 
     app.post('/users', async (req, res) => {
       const user = req.body;
@@ -87,16 +114,31 @@ async function run() {
     })
 
     // //// admin verify
-    app.get('/users/admin/:email', verifyJWT, async (req, res) => {
+    app.get('/users/admin/:email', verifyJWT,  async (req, res) => {
       const email = req.params.email;
+
+      // if (req.decoded.email !== email) {
+      //   res.send({ admin: false })
+      // }
+
+      const query = { email: email }
+      const user = await usersCollection.findOne(query);
+      const result = { admin: user?.role === 'admin' }
+      res.send(result);
+    })
+    // instructor
+    app.get('/users/ins/:email',   async (req, res) => {
+      const email = req.params.email.toLowerCase();
+      console.log({email})
     
-      if (req.decoded.email !== email) {
-        res.send({ admin: false });
-      }
+      // if (req.decoded.email !== email) {
+      //   res.send({ instructor: false });
+      // }
     
       const query = { email: email };
       const user = await usersCollection.findOne(query);
-      const result = { admin: user?.role === 'admin' };
+      console.log(user)
+      const result = { instructor: user?.role === 'instructor' };
       res.send(result);
     });
 
@@ -114,8 +156,21 @@ async function run() {
       const result = await usersCollection.updateOne(filter, updateDoc);
       res.send(result);
     })
+    // ins
+    app.patch('/users/ins/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) }
+      const updateDoc = {
+        $set: {
+          role: "instructor"
+        }
+      }
 
+      const result = await usersCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    })
 
+    
 
 
     //add
@@ -137,6 +192,20 @@ async function run() {
       const result = await courseCollection.deleteOne(query)
       res.send(result);    
    })
+
+   // for ins class
+   app.get('/course/:email', async (req, res) => {
+    const email = req.params.email;
+  
+    try {
+      const result = await courseCollection.find({ email: email }).toArray();
+      res.send(result);
+    } catch (error) {
+      console.error(error);
+      res.status(500).send('Error retrieving course data');
+    }
+  });
+
 
     // cart collection
     app.post('/carts', async (req, res) => {
