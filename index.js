@@ -193,7 +193,7 @@ async function run() {
       res.send(result);    
    })
 
-   // for ins class
+   // for ins 
    app.get('/course/:email', async (req, res) => {
     const email = req.params.email;
   
